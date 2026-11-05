@@ -1,189 +1,121 @@
 # Mini Docto+
 
-Mini Docto+ est une mini-application de mise en relation entre patients et professionnels de sante.
+Mini-application de **prise de rendez-vous médicaux** qui met en relation patients et professionnels de santé.
 
-Le projet est compose de trois parties:
+Le projet comprend trois applications :
 
-- `backend/`: API REST Spring Boot + MongoDB.
-- `pro-web/`: application web React/Vite pour les professionnels.
-- `patient-mobile/`: application Flutter pour les patients.
+| Dossier | Application | Stack |
+|---|---|---|
+| `backend/` | API REST | Spring Boot 4, Spring Security, JWT, MongoDB |
+| `pro-web/` | Application web des professionnels | React 19, Vite |
+| `patient-mobile/` | Application mobile des patients | Flutter, Provider |
 
-## Fonctionnalites
+## Fonctionnalités
 
 ### Authentification
+- Inscription et connexion des patients et des professionnels
+- Authentification **JWT**, avec rafraîchissement du token (`/api/auth/refresh`)
+- Séparation des accès par rôle : `PATIENT` et `PRO`
 
-- Inscription et connexion des patients.
-- Inscription et connexion des professionnels.
-- Authentification par JWT.
-- Separation des acces par role: `patient` et `pro`.
+### Patient (mobile)
+- Consulter les professionnels disponibles, **triés par score décroissant**
+- Réserver un créneau horaire
+- Consulter ses rendez-vous
+- Modifier ou annuler uniquement ses propres rendez-vous
 
-### Patient
+### Professionnel (web)
+- Ajouter des créneaux de disponibilité
+- Supprimer ses propres créneaux
+- Consulter les rendez-vous réservés par les patients
 
-- Consulter la liste des professionnels disponibles.
-- Voir les professionnels tries par score decroissant.
-- Reserver un creneau horaire.
-- Consulter ses rendez-vous.
-- Modifier ou annuler uniquement ses propres rendez-vous.
+## Endpoints principaux
 
-### Professionnel
+| Préfixe | Rôle |
+|---|---|
+| `/api/auth` | Inscription, connexion, refresh token |
+| `/api/pros` | Liste des professionnels et de leurs créneaux |
+| `/api/slots` | Gestion des créneaux (professionnel) |
+| `/api/appointments` | Réservation, modification, annulation |
+| `/api/patients`, `/api/users` | Gestion des comptes |
 
-- Ajouter des creneaux de disponibilite.
-- Supprimer ses propres creneaux.
-- Consulter la liste des rendez-vous reserves par les patients.
-
-## Prerequis
-
-- Java 17.
-- MongoDB local ou MongoDB Atlas.
-- Node.js et npm.
-- Flutter SDK.
+La documentation Swagger est disponible sur `http://localhost:5000/swagger-ui/index.html`.
 
 ## Installation et lancement
 
+Prérequis : Java 17, Node.js 18+, SDK Flutter, MongoDB (local ou Atlas).
+
 ### 1. Backend Spring Boot
 
-Configurer MongoDB dans:
-
-```text
-backend/src/main/resources/application.properties
-```
-
-Configuration par defaut:
+Configurer MongoDB dans `backend/src/main/resources/application.properties` :
 
 ```properties
 server.port=5000
 spring.data.mongodb.uri=mongodb://localhost:27017/minidoctoplus
 ```
 
-Lancer le backend:
-
 ```bash
 cd backend
-./mvnw spring-boot:run
+./mvnw spring-boot:run        # Windows : .\mvnw.cmd spring-boot:run
 ```
 
-Sur Windows:
-
-```powershell
-cd backend
-.\mvnw.cmd spring-boot:run
-```
-
-API locale:
-
-```text
-http://localhost:5000/api
-```
-
-Swagger:
-
-```text
-http://localhost:5000/swagger-ui/index.html
-```
+API locale : `http://localhost:5000/api`
 
 ### 2. Application web professionnel
 
 ```bash
 cd pro-web
 npm install
-npm run dev
+npm run dev                   # http://localhost:5173
 ```
 
-URL locale:
-
-```text
-http://localhost:5173
-```
-
-Si besoin, configurer l'URL du backend dans `pro-web/.env` ou `.env.development`:
+Si besoin, configurer l'URL de l'API dans `pro-web/.env` :
 
 ```env
 VITE_API_URL=http://localhost:5000/api
 ```
 
-### 3. Application mobile patient Flutter
+### 3. Application mobile patient
 
 ```bash
 cd patient-mobile
 flutter pub get
-flutter run
+flutter run                   # ou : flutter run -d chrome
 ```
 
-Pour lancer directement sur Chrome:
+URL de l'API selon la cible :
 
-```bash
-flutter run -d chrome
-```
-
-Configuration API Flutter:
-
-- Web / desktop: `http://localhost:5000/api`
-- Android emulator: `http://10.0.2.2:5000/api`
-- Appareil physique: utiliser l'IP locale du PC:
-
-```bash
-flutter run --dart-define=API_HOST=192.168.1.10
-```
+- Web / desktop : `http://localhost:5000/api`
+- Émulateur Android : `http://10.0.2.2:5000/api`
+- Appareil physique : IP locale du PC, par exemple `flutter run --dart-define=API_HOST=192.168.1.10`
 
 ## Tests
 
-Backend:
-
 ```bash
-cd backend
-./mvnw test
+cd backend && ./mvnw test
+cd pro-web && npm run lint && npm run build
+cd patient-mobile && flutter analyze && flutter test
 ```
 
-Web:
+## Sécurité
 
-```bash
-cd pro-web
-npm run lint
-npm run build
-```
-
-Flutter:
-
-```bash
-cd patient-mobile
-flutter analyze
-flutter test
-```
-
-## Securite
-
-- Les mots de passe sont hashes avec BCrypt avant d'etre stockes.
-- L'authentification utilise des tokens JWT.
-- Les routes sont protegees avec Spring Security.
-- Les routes patient sont reservees au role `PATIENT`.
-- Les routes professionnel sont reservees au role `PRO`.
-- Un patient ne peut modifier ou annuler que ses propres rendez-vous.
-- Un professionnel ne peut supprimer que ses propres creneaux.
-- Les reponses API ne renvoient pas les mots de passe.
+- Mots de passe hachés avec **BCrypt**
+- Routes protégées par Spring Security, avec contrôle des rôles `PATIENT` / `PRO`
+- Un patient ne peut modifier ou annuler que ses propres rendez-vous
+- Un professionnel ne peut supprimer que ses propres créneaux
+- Les mots de passe ne sont jamais renvoyés par l'API
 
 ## Performance
 
-- MongoDB est utilise pour stocker les utilisateurs, creneaux et rendez-vous.
-- L'email utilisateur est indexe pour accelerer la recherche et eviter les doublons.
-- Les creneaux ont un index compose unique sur `pro`, `date` et `startTime` pour eviter les doublons.
-- Les rendez-vous ont un index unique sur `slot` pour eviter la double reservation.
-- Le tri des professionnels par score decroissant est fait cote backend, ce qui evite un tri inutile cote mobile.
-- Les clients React et Flutter consomment uniquement les donnees necessaires.
+- Index unique sur l'e-mail des utilisateurs (recherche rapide, pas de doublons)
+- Index composé unique sur `pro` + `date` + `startTime` pour les créneaux
+- Index unique sur `slot` pour les rendez-vous : **pas de double réservation**
+- Tri des professionnels par score fait côté backend
+- Les clients React et Flutter ne récupèrent que les données nécessaires
 
-## Validation locale
+## Firebase Analytics
 
-Commandes validees:
+![Capture Firebase Analytics](firebase_analytics.png)
 
-- `backend`: `.\mvnw.cmd test`
-- `pro-web`: `npm.cmd run lint`
-- `pro-web`: `npm.cmd run build`
+## Auteur
 
-Flutter doit etre valide sur une machine ayant le SDK Flutter installe avec:
-
-```bash
-flutter analyze
-flutter test
-```
-Firebase capture 
-<img width="1919" height="914" alt="image" src="https://github.com/user-attachments/assets/67f61326-ed94-4ff8-a269-380c7c05fcbf" />
-
+**Yosra Dab** — Ingénieure logiciel Full Stack · [Portfolio](https://yosradab.vercel.app) · [GitHub](https://github.com/yosradab) · [LinkedIn](https://linkedin.com/in/yosradab)
